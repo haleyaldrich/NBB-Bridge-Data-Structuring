@@ -338,19 +338,6 @@ def transform_df_to_openground_rec(df: pd.DataFrame) -> list[list[dict]]:
     return _format_records(_extract_records_from_df(df))
 
 
-def insert_cpt_data(cpt_data: CPTData, project_id: str) -> None:
-    """Inserts CPT data in OpenGround's `StaticConePenetrationData` table."""
-
-    data = cpt_data.data
-    assert len(data["uui_StaticConePenetrationGeneral"].unique()) == 1
-    data = data.reset_index(drop=True)
-    assert data["Depth"].is_unique
-    assert data['CorrectedConeResistance'] is not None
-
-    records = transform_df_to_openground_rec(data)
-    openground.insert_in_bulk(project_id, "StaticConePenetrationData", records)
-
-
 def get_number_cpt_records(project_id: str, cpt_name: str) -> int:
     """
     Returns the number of CPT readings loaded in OpenGround's
@@ -365,9 +352,25 @@ def get_number_cpt_records(project_id: str, cpt_name: str) -> int:
         {"Group": "StaticConePenetrationData", "Header": "ConeResistance"}
     ],
         "Group": "StaticConePenetrationData",
-        "Projects": [p.cloud_id]
+        "Projects": [project_id]
     }
-    df = utils.openground.execute_query(payload, p.request_handler)
+    df = openground.execute_query(payload)
     if len(df) == 0:
         return 0
     return len(df[df['LocationID'] == cpt_name])
+
+def insert_cpt_data(cpt_data: CPTData, project_id: str) -> None:
+    """Inserts CPT data in OpenGround's `StaticConePenetrationData` table."""
+
+    data = cpt_data.data
+    assert len(data["uui_StaticConePenetrationGeneral"].unique()) == 1
+    cpt_name = data["uui_StaticConePenetrationGeneral"].unique()[0]
+    data = data.reset_index(drop=True)
+    assert data["Depth"].is_unique
+    assert data['CorrectedConeResistance'] is not None
+
+    records = transform_df_to_openground_rec(data)
+    openground.insert_in_bulk(project_id, "StaticConePenetrationData", records)
+
+    loaded = get_number_cpt_records(project_id, cpt_name)
+    assert loaded == len(data), f"Loaded {loaded} records, expected {len(data)}"

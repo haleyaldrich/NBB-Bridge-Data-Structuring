@@ -105,6 +105,61 @@ def delete_location_by_id(project_id: str, location_id: str) -> None:
         raise Exception(f"Error deleting location: {response.text}")
 
 
+def _manipulate_df(response: dict) -> pd.DataFrame:
+    """Formats a JSON response into a convenient dataframe."""
+    df = pd.json_normalize(response, record_path=["DataFields"], meta=["Id"])
+    df = pd.pivot(df, index="Id", columns="Header", values="Value")
+    df.columns = df.columns.map(lambda x: x.split(".")[-1])  # Remove GroupName
+    df.columns.name = None
+    df = df.reset_index()
+    return df
+
+
+def execute_query(payload: dict) -> pd.DataFrame:
+    """
+    Queries the db with a payload and returns a dataframe.
+
+    If no records are found, an empty dataframe is returned.
+    """
+    payload = json.dumps(payload)
+    url = f"{get_root_url()}/data/query"
+    response = requests.request(
+        "POST", url, headers=get_og_headers(), data=payload
+    ).json()
+
+    if len(response) == 0:
+        return pd.DataFrame()
+    else:
+        return _manipulate_df(response)
+
+
+def get_static_cone_general_records(project_id: str) -> pd.DataFrame:
+    """
+    Returns all static cone general records from `StaticConePenetrationGeneral` as
+    a dictionary in the form of {'location_id': 'cloud_id'}.
+    """
+
+    payload = {
+        "Projections": [
+            {"Group": "LocationDetails", "Header": "LocationID"},
+            {"Group": "StaticConePenetrationGeneral", "Header": "TestNumber"},
+            {"Group": "StaticConePenetrationGeneral", "Header": "TestType"},
+        ],
+        "Group": "StaticConePenetrationGeneral",
+        "Projects": [project_id],
+    }
+
+    df = execute_query(payload)
+
+    out = {}
+    assert len(df) == len(
+        df["LocationID"].unique()
+    ), "Assumption violated: LocationID is not unique"
+    for _, row in df.iterrows():
+        out[row["LocationID"]] = row["Id"]
+    return out
+
+
 def insert_in_bulk(project_id: str, group_name: str, records: list[list[dict]]):
     """
     Args:
@@ -168,6 +223,9 @@ def insert_in_bulk(project_id: str, group_name: str, records: list[list[dict]]):
 
         # Make request and logging
         r = requests.post(url, headers=get_og_headers(), data=payload)
+
+        if r.status_code != 200:
+            raise Exception(f"Error inserting records: {r.text}")
 
     MAX_ALLOWED_BULK = 1000
 

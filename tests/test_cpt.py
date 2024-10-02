@@ -4,6 +4,7 @@ import numpy as np
 
 from src import utils, openground
 
+PROJECT_CLOUD_ID = "b1e7058f-f750-4add-8245-21244b458432"
 
 def get_test_file_path(filename: str):
     return os.path.join(os.path.dirname(__file__), "test_files", filename)
@@ -43,36 +44,34 @@ def test_utils_parse_conetec():
 def test_insert_location_from_cpt_test():
 
     cpt_name = "cpt_test"
-    project_id = "b1e7058f-f750-4add-8245-21244b458432"
 
     # Insert location
     f = get_test_file_path("24-53-28244_SPBR-B13E-1A-BSC.XLS")
     cpt, _ = utils.parse_conetec(f, cpt_name)
-    r = utils.insert_location_from_cpt_test(cpt, project_id, "CPT")
+    r = utils.insert_location_from_cpt_test(cpt, PROJECT_CLOUD_ID, "CPT")
 
     # Check location was inserted
-    assert cpt_name in openground.get_project_locations(project_id)
+    assert cpt_name in openground.get_project_locations(PROJECT_CLOUD_ID)
 
     # Delete location
-    openground.delete_location_by_id(project_id, r)
+    openground.delete_location_by_id(PROJECT_CLOUD_ID, r)
 
 
 def test_insert_cpt_test():
 
     cpt_name = "cpt_test"
-    project_id = "b1e7058f-f750-4add-8245-21244b458432"
 
     # Parse file and insert location
     f = get_test_file_path("24-53-28244_SPBR-B13E-1A-BSC.XLS")
     cpt, _ = utils.parse_conetec(f, cpt_name)
-    r = utils.insert_location_from_cpt_test(cpt, project_id, "CPT")
-    assert cpt_name in openground.get_project_locations(project_id)
+    r = utils.insert_location_from_cpt_test(cpt, PROJECT_CLOUD_ID, "CPT")
+    assert cpt_name in openground.get_project_locations(PROJECT_CLOUD_ID)
 
     # Insert CPT test
-    utils.insert_cpt_test(cpt, project_id)
+    utils.insert_cpt_test(cpt, PROJECT_CLOUD_ID)
 
     # Delete location and by extension the CPT test
-    openground.delete_location_by_id(project_id, r)
+    openground.delete_location_by_id(PROJECT_CLOUD_ID, r)
 
 
 def test_transform_df_to_openground_rec():
@@ -82,25 +81,33 @@ def test_transform_df_to_openground_rec():
     records = utils.transform_df_to_openground_rec(cpt_data.data)
     assert len(records) == 116
 
+def test_get_number_cpt_records():
 
-# def test_insert_cpt_data():
+    n = utils.get_number_cpt_records(PROJECT_CLOUD_ID, 'BR-TN-3(SCPT)')
+    assert n == 483
 
-#     cpt_name = "cpt_test"
-#     project_id = "b1e7058f-f750-4add-8245-21244b458432"
 
-#     # Parse file and insert location
-#     f = get_test_file_path("24-53-28244_SPBR-B13E-1A-BSC.XLS")
-#     cpt, cpt_data = utils.parse_conetec(f, cpt_name)
-#     utils.insert_location_from_cpt_test(cpt, project_id, "CPT")
-#     assert cpt_name in openground.get_project_locations(project_id)
+def test_insert_cpt_data():
 
-#     # Insert CPT test
-#     utils.insert_cpt_test(cpt, project_id)
+    cpt_name = "cpt_test"
 
-#     # Insert CPT data
-#     utils.insert_cpt_data(cpt_data, project_id)
 
-    # # Delete location and by extension the CPT test
-    # location = openground.get_project_locations(project_id)[cpt_name]
-    # openground.delete_location_by_id(project_id, location)
+    # Parse file and insert location
+    f = get_test_file_path("24-53-28244_SPBR-B13E-1A-BSC.XLS")
+    cpt, cpt_data = utils.parse_conetec(f, cpt_name)
+    utils.insert_location_from_cpt_test(cpt, PROJECT_CLOUD_ID, "CPT")
+    assert cpt_name in openground.get_project_locations(PROJECT_CLOUD_ID)
+
+    # Insert CPT test
+    utils.insert_cpt_test(cpt, PROJECT_CLOUD_ID)
+
+    # Insert CPT data
+    try:
+        utils.insert_cpt_data(cpt_data, PROJECT_CLOUD_ID)
+    except Exception as e:
+        raise e
+    finally:
+        # Delete location and by extension the CPT test
+        location = openground.get_project_locations(PROJECT_CLOUD_ID)[cpt_name]
+        openground.delete_location_by_id(PROJECT_CLOUD_ID, location)
 
