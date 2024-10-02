@@ -8,6 +8,7 @@ from src import utils, openground
 def get_test_file_path(filename: str):
     return os.path.join(os.path.dirname(__file__), "test_files", filename)
 
+
 def test_utils_parse_conetec():
 
     f = get_test_file_path("24-53-28244_SPBR-B13E-1A-BSC.XLS")
@@ -41,8 +42,8 @@ def test_utils_parse_conetec():
 
 def test_insert_location_from_cpt_test():
 
-    cpt_name = 'cpt_test'
-    project_id = 'b1e7058f-f750-4add-8245-21244b458432'
+    cpt_name = "cpt_test"
+    project_id = "b1e7058f-f750-4add-8245-21244b458432"
 
     f = get_test_file_path("24-53-28244_SPBR-B13E-1A-BSC.XLS")
     cpt, _ = utils.parse_conetec(f, cpt_name)
@@ -56,8 +57,8 @@ def test_insert_location_from_cpt_test():
 
 def test_insert_cpt_test():
 
-    cpt_name = 'cpt_test'
-    project_id = 'b1e7058f-f750-4add-8245-21244b458432'
+    cpt_name = "cpt_test"
+    project_id = "b1e7058f-f750-4add-8245-21244b458432"
 
     # Parse file and insert location
     f = get_test_file_path("24-53-28244_SPBR-B13E-1A-BSC.XLS")
@@ -78,4 +79,3 @@ def test_transform_df_to_openground_rec():
     _, cpt_data = utils.parse_conetec(f, "cpt_test")
     records = utils.transform_df_to_openground_rec(cpt_data.data)
     assert len(records) == 116
-    
