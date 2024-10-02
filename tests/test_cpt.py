@@ -6,6 +6,7 @@ from src import utils, openground
 
 PROJECT_CLOUD_ID = "b1e7058f-f750-4add-8245-21244b458432"
 
+
 def get_test_file_path(filename: str):
     return os.path.join(os.path.dirname(__file__), "test_files", filename)
 
@@ -81,16 +82,16 @@ def test_transform_df_to_openground_rec():
     records = utils.transform_df_to_openground_rec(cpt_data.data)
     assert len(records) == 116
 
+
 def test_get_number_cpt_records():
 
-    n = utils.get_number_cpt_records(PROJECT_CLOUD_ID, 'BR-TN-3(SCPT)')
+    n = utils.get_number_cpt_records(PROJECT_CLOUD_ID, "BR-TN-3(SCPT)")
     assert n == 483
 
 
 def test_insert_cpt_data():
 
     cpt_name = "cpt_test"
-
 
     # Parse file and insert location
     f = get_test_file_path("24-53-28244_SPBR-B13E-1A-BSC.XLS")
@@ -110,4 +111,3 @@ def test_insert_cpt_data():
         # Delete location and by extension the CPT test
         location = openground.get_project_locations(PROJECT_CLOUD_ID)[cpt_name]
         openground.delete_location_by_id(PROJECT_CLOUD_ID, location)
-

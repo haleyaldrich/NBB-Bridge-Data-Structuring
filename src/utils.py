@@ -344,33 +344,57 @@ def get_number_cpt_records(project_id: str, cpt_name: str) -> int:
     `StaticConePenetrationData` table for a given CPT ID.
 
     Returns 0 if there are no CPT records or if specific cpt_name does not exist.
-    """    
+    """
     payload = {
         "Projections": [
-        {"Group": "LocationDetails", "Header": "LocationID"},
-        {"Group": "StaticConePenetrationGeneral", "Header": "TestNumber"},
-        {"Group": "StaticConePenetrationData", "Header": "ConeResistance"}
-    ],
+            {"Group": "LocationDetails", "Header": "LocationID"},
+            {"Group": "StaticConePenetrationGeneral", "Header": "TestNumber"},
+            {"Group": "StaticConePenetrationData", "Header": "ConeResistance"},
+        ],
         "Group": "StaticConePenetrationData",
-        "Projects": [project_id]
+        "Projects": [project_id],
     }
     df = openground.execute_query(payload)
     if len(df) == 0:
         return 0
-    return len(df[df['LocationID'] == cpt_name])
+    return len(df[df["LocationID"] == cpt_name])
+
 
 def insert_cpt_data(cpt_data: CPTData, project_id: str) -> None:
     """Inserts CPT data in OpenGround's `StaticConePenetrationData` table."""
 
+    # DEV NOTE: CPT data must correspond to a single CPT location
     data = cpt_data.data
+
+    data = data.round(9)
+
     assert len(data["uui_StaticConePenetrationGeneral"].unique()) == 1
     cpt_name = data["uui_StaticConePenetrationGeneral"].unique()[0]
     data = data.reset_index(drop=True)
     assert data["Depth"].is_unique
-    assert data['CorrectedConeResistance'] is not None
+    assert data["CorrectedConeResistance"] is not None
 
+    # Foreign key mapper
+    # DEV NOTE: We need to map the cpt name to the corresponding entry in the
+    # `StaticConePenetrationGeneral` table. The name attribute in a CPTGeneral
+    # object is used to create a location in the `LocationDetails` table. Furthermore
+    # there is a one-to-one relationship between a CPTGeneral and a CPTData object.
+    # where name is the same as cpt_name respectively.
+    # Recall the hierarchy: LocationDetails -> StaticConePenetrationGeneral -> StaticConePenetrationData
+    cpt_records = openground.get_static_cone_general_records(project_id)
+    if cpt_name not in cpt_records:
+        raise ValueError(
+            f"CPT Location {cpt_name} not found in project. Locations found: {cpt_records}"
+        )
+
+    # Foreign key mapping
+    cpt_cloud_id = cpt_records[cpt_name]
+    data["uui_StaticConePenetrationGeneral"] = cpt_cloud_id
+
+    # Transform records to OG format and load
     records = transform_df_to_openground_rec(data)
     openground.insert_in_bulk(project_id, "StaticConePenetrationData", records)
 
+    # Check number of records inserted matches the number of records in the data
     loaded = get_number_cpt_records(project_id, cpt_name)
     assert loaded == len(data), f"Loaded {loaded} records, expected {len(data)}"
