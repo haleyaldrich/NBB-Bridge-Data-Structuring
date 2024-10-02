@@ -10,6 +10,7 @@ from src import openground
 
 load_dotenv(override=True)
 
+
 def parse_conetec(filepath: str, cpt_id: str) -> tuple[CPTGeneral, CPTData]:
     """
     Parses a CPT Conetec file in xls format. The file is expected to conform
@@ -150,6 +151,7 @@ def parse_conetec(filepath: str, cpt_id: str) -> tuple[CPTGeneral, CPTData]:
 
     return cpt, cpt_data
 
+
 def insert_location_from_cpt_test(
     cpt: CPTGeneral,
     project_id: str,
@@ -187,6 +189,7 @@ def insert_location_from_cpt_test(
 
     return r.json()["Id"]
 
+
 def insert_cpt_test(cpt: CPTGeneral, project_id: str) -> str:
     """
     Inserts a CPT test in OpenGround's `StaticConePenetrationGeneral` table
@@ -196,39 +199,42 @@ def insert_cpt_test(cpt: CPTGeneral, project_id: str) -> str:
     `LocationDetails` table.
 
     The `uui_LocationDetails` foreign key is mapped to the corresponding cloud_id.
-    """    
+    """
     # Makes record conformant to OpenGround's schema:
-        # Formats attributes to {"Header": key, "Value": value}.
-        # Removes `DateEnd` attribute as it goes into `LocationDetails`.
-        # Maps `uui_LocationDetails` to the corresponding cloud_id.
+    # Formats attributes to {"Header": key, "Value": value}.
+    # Removes `DateEnd` attribute as it goes into `LocationDetails`.
+    # Maps `uui_LocationDetails` to the corresponding cloud_id.
 
     locations = openground.get_project_locations(project_id)
     if cpt.cpt_id not in locations:
-        raise ValueError(f"Location {cpt.cpt_id} not found in project. Locations found: {locations}")
+        raise ValueError(
+            f"Location {cpt.cpt_id} not found in project. Locations found: {locations}"
+        )
 
     record = []
     for key, value in cpt.og_record.items():
 
-        if key == 'DateStart':
+        if key == "DateStart":
             continue
 
-        if key =='uui_LocationDetails':
+        if key == "uui_LocationDetails":
             value = locations[value]
 
         record.append({"Header": key, "Value": value})
 
     # POST request
-    data = {'Group': 'StaticConePenetrationGeneral', 'DataFields': record}
+    data = {"Group": "StaticConePenetrationGeneral", "DataFields": record}
     payload = json.dumps(data)
     url = (
-        f'{openground.get_root_url()}/data/projects/{project_id}/groups/'
-        f'StaticConePenetrationGeneral'
+        f"{openground.get_root_url()}/data/projects/{project_id}/groups/"
+        f"StaticConePenetrationGeneral"
     )
     r = requests.post(url, data=payload, headers=openground.get_og_headers())
 
     if r.status_code != 200:
-        raise Exception(f'Error inserting CPT test: {r.text}')
-    return r.json()['Id']
+        raise Exception(f"Error inserting CPT test: {r.text}")
+    return r.json()["Id"]
+
 
 def _format(d: dict) -> list[dict]:
     """
@@ -238,16 +244,18 @@ def _format(d: dict) -> list[dict]:
     """
     output = []
     for key, value in d.items():
-        if 'Date' in key and type(value) != str:
+        if "Date" in key and type(value) != str:
             value = value.strftime("%Y-%m-%dT%H:%M:%SZ")
         output.append({"Header": key, "Value": value})
     return output
+
 
 def _format_records(recs: list[dict]) -> list[list[dict]]:
     formatted_rec = []
     for r in recs:
         formatted_rec.append(_format(r))
     return formatted_rec
+
 
 def _extract_records_from_df(df: pd.DataFrame) -> list:
     """
@@ -280,10 +288,10 @@ def _extract_records_from_df(df: pd.DataFrame) -> list:
             {'Name': 'John', 'Age': 25.0, 'City': 'York', 'Gender': 'Male'},
             {'Name': 'Alice', 'Age': 30.0, 'Gender': 'Female'},
             {'Name': 'Bob', 'City': 'San Francisco', 'Gender': 'Male'}
-            ]    
+            ]
     """
 
-    records = df.to_dict(orient='index')
+    records = df.to_dict(orient="index")
     for _, d in records.items():
         for key, value in d.copy().items():
             if pd.isna(value):
@@ -291,10 +299,11 @@ def _extract_records_from_df(df: pd.DataFrame) -> list:
 
     return list(records.values())
 
+
 def transform_df_to_openground_rec(df: pd.DataFrame) -> list[list[dict]]:
     """
-    Converts a dataframe into a list of lists where each inner list is a 
-    dictionary conformant to the Openground structure. 
+    Converts a dataframe into a list of lists where each inner list is a
+    dictionary conformant to the Openground structure.
 
     .. code-bloc:: python
 
@@ -329,18 +338,16 @@ def transform_df_to_openground_rec(df: pd.DataFrame) -> list[list[dict]]:
     return _format_records(_extract_records_from_df(df))
 
 
-
 def insert_cpt_data(cpt_data: pd.DataFrame, project_id: str) -> None:
     """Inserts CPT data in OpenGround's `StaticConePenetrationData` table."""
 
-    assert len(cpt_data['uui_StaticConePenetrationGeneral'].unique()) == 1
+    assert len(cpt_data["uui_StaticConePenetrationGeneral"].unique()) == 1
     cpt_data = cpt_data.reset_index(drop=True)
-    cpt_id = cpt_data['uui_StaticConePenetrationGeneral'][0]
-    assert cpt_data['Depth'].is_unique
+    cpt_id = cpt_data["uui_StaticConePenetrationGeneral"][0]
+    assert cpt_data["Depth"].is_unique
     assert cpt_data.qt is not None
 
-
     records = transform_df_to_openground_rec(cpt_data)
-    g = GroupManager('StaticConePenetrationData', p)
+    g = GroupManager("StaticConePenetrationData", p)
     _validate_records(g, records)
-    utils.openground.insert_in_bulk(p, 'StaticConePenetrationData', records)
+    utils.openground.insert_in_bulk(p, "StaticConePenetrationData", records)
