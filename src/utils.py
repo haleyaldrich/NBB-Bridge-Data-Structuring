@@ -1,4 +1,5 @@
 import numpy as np
+import os
 import pandas as pd
 
 from src.models import CPTGeneral, CPTData
@@ -126,14 +127,14 @@ def parse_conetec(filepath: str, cpt_id: str) -> tuple[CPTGeneral, CPTData]:
     datetime = pd.to_datetime(datetime).strftime("%Y-%m-%dT%H:%M:%SZ")
 
     cpt = CPTGeneral(
-        filepath=filepath,
+        source_file=os.path.basename(filepath),
         cpt_id=cpt_id,
         timestamp=datetime,
         area_ratio=df_meta.loc["Tip Net Area Ratio:", "Value"],
-        cone_id=df_meta.loc["Cone ID:", "Value"],
+        cone_id=str(df_meta.loc["Cone ID:", "Value"]),
         cone_type="EC",
         subcontractor="ConeTec",
-        test_id=df_meta.loc["Run ID:", "Value"],
+        test_id=str(df_meta.loc["Run ID:", "Value"]),
         # This are not found in Contec's files
         depth_gwt=None,
         pen_rate=None,

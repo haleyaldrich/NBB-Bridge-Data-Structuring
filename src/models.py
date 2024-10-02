@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-from typing import Callable
 
 
 class CPTGeneral:
@@ -10,7 +9,7 @@ class CPTGeneral:
     """
 
     OG_MAPPER = {
-        "filepath": "AssociatedFileReference",
+        "source_file": "AssociatedFileReference",
         "cpt_id": "uui_LocationDetails",
         "area_ratio": "ConeAreaRatio",
         "cone_id": "ConeReference",
@@ -26,9 +25,9 @@ class CPTGeneral:
 
     def __init__(
         self,
-        filepath: str,
+        source_file: str,
         cpt_id: str,
-        timestamp: str,
+        timestamp: str,  # "%Y-%m-%dT%H:%M:%SZ"
         area_ratio: float,  # unitless
         cone_id: str,
         depth_gwt: float,  # ft
@@ -42,7 +41,7 @@ class CPTGeneral:
         """
         Initializes a `CPTGeneral` object. Timestamp is "%Y-%m-%dT%H:%M:%SZ".
         """
-        self.filepath = filepath
+        self.source_file = source_file
         self.cpt_id = cpt_id
         self.timestamp = timestamp
         self.area_ratio = area_ratio
