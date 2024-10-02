@@ -20,7 +20,7 @@ class CPTGeneral:
         "test_id": "TestNumber",
         "cone_type": "uui_TestType",
         "pre_drill_depth": "PreDrillDepth",
-        "timestamp": "DateEnd",
+        "timestamp": "DateStart",
     }
 
     def __init__(

@@ -1,8 +1,14 @@
+from dotenv import load_dotenv
+import json
 import numpy as np
 import os
+import requests
 import pandas as pd
 
 from src.models import CPTGeneral, CPTData
+from src import openground
+
+load_dotenv(override=True)
 
 
 def parse_conetec(filepath: str, cpt_id: str) -> tuple[CPTGeneral, CPTData]:
@@ -84,13 +90,6 @@ def parse_conetec(filepath: str, cpt_id: str) -> tuple[CPTGeneral, CPTData]:
     assert set(df_meta.index).difference(expected) == set()
 
     # CHECK RAW DATA
-    # DEV NOTE: Two rows of headers are expected.
-    # One with the parameter name and the other with the units.
-    # At this stage, the parameters and units have been consistent.
-    # The only peculiarity is that there could be an extra column for
-    # passive gamma-ray radiattion.
-
-    # Code below written for expressiveness and not efficiency.
     cols = df.loc[end_of_metadata + 1].to_list()
     if cols != ["Depth", "Depth", "qc", "qt", "fs", "u", "Rf"]:
         raise IOError(f"Parsed columns differ. Columns: {cols}")
@@ -151,3 +150,42 @@ def parse_conetec(filepath: str, cpt_id: str) -> tuple[CPTGeneral, CPTData]:
     )
 
     return cpt, cpt_data
+
+
+def insert_location_from_cpt_test(
+        cpt: CPTGeneral,
+        project_id: str,
+        location_type: str,
+    ) -> str:
+    
+    """
+    Inserts a location in OpenGround's `LocationDetails` table from a CPt test.
+
+    Updates the project's `locations` attribute.
+
+    This function is provided as both a convenience and necessity because of
+    the following two reasons:
+    
+        * A location is required to insert a CPT test in OpenGround.
+        * The schema does not have a timestamp field for the CPT test. This
+            is instead stored in the `LocationDetails` table.
+    """
+    
+    data = {
+        'Group': 'LocationDetails', 
+        'DataFields': [
+            {'Header': 'LocationID', 'Value': cpt.cpt_id},
+            {'Header': 'uui_LocationType', 'Value': location_type},
+            {'Header': 'DateStart', 'Value': cpt.timestamp},
+
+    ]}
+    payload = json.dumps(data)
+    url = (
+        f'{openground.get_root_url()}/data/projects/{project_id}/groups/LocationDetails'
+    )
+    r = requests.post(url, data=payload, headers=openground.get_og_headers())
+    
+    if r.status_code != 200:
+        raise Exception(f'Error inserting Location: {r.text}')
+    
+    return r.json()['Id']
