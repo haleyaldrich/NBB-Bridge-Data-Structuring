@@ -1,25 +1,5 @@
 [
   {
-    "id": "BR-TN-3(SCPT)",
-    "source_file": "\\haleyaldrich.com\\share\\CF\\Projects\\0200981\\As Received\\2024-0919-ConeTec CPT Data\\3-Data Files\\CPTu Data\\24-53-28244_SPBR-TN-3-BSC.XLS",
-    "location_type": "SCPT"
-  },
-  {
-    "id": "BR-TN-5(SCPT)",
-    "source_file": "\\haleyaldrich.com\\share\\CF\\Projects\\0200981\\As Received\\2024-0919-ConeTec CPT Data\\3-Data Files\\CPTu Data\\24-53-28244_SPBR-TN-5-BSC.XLS",
-    "location_type": "SCPT"
-  },
-  {
-    "id": "BR-TN-7(SCPT)",
-    "source_file": "\\haleyaldrich.com\\share\\CF\\Projects\\0200981\\As Received\\2024-0919-ConeTec CPT Data\\3-Data Files\\CPTu Data\\24-53-28244_SPBR-TN-7-BSC.XLS",
-    "location_type": "SCPT"
-  },
-  {
-    "id": "BR-TN-9(SCPT)",
-    "source_file": "\\haleyaldrich.com\\share\\CF\\Projects\\0200981\\As Received\\2024-0919-ConeTec CPT Data\\3-Data Files\\CPTu Data\\24-53-28244_SPBR-TN-9-BSC.XLS",
-    "location_type": "SCPT"
-  },
-  {
     "id": "BR-N14E-1(SCPT)",
     "source_file": "\\haleyaldrich.com\\share\\CF\\Projects\\0200981\\As Received\\2024-0919-ConeTec CPT Data\\3-Data Files\\CPTu Data\\24-53-28244_SPBR-N14E-1-BSC.XLS",
     "location_type": "SCPT"

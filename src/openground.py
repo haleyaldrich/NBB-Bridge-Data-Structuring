@@ -96,10 +96,17 @@ def get_project_locations(project_id: str) -> pd.DataFrame:
 
 def delete_location_by_id(project_id: str, location_id: str) -> None:
 
-    url = (
-        f"{get_root_url()}/data/projects/{project_id}/" f"groups/LocationDetails/delete"
-    )
+    url = f"{get_root_url()}/data/projects/{project_id}/groups/LocationDetails/delete"
     response = requests.put(url, headers=get_og_headers(), json=[location_id])
+
+    if response.status_code != 200:
+        raise Exception(f"Error deleting location: {response.text}")
+
+
+def delete_cpt_by_id(project_id: str, cpt_id: str) -> None:
+
+    url = f"{get_root_url()}/data/projects/{project_id}/groups/StaticConePenetrationGeneral/delete"
+    response = requests.put(url, headers=get_og_headers(), json=[cpt_id])
 
     if response.status_code != 200:
         raise Exception(f"Error deleting location: {response.text}")
@@ -227,7 +234,7 @@ def insert_in_bulk(project_id: str, group_name: str, records: list[list[dict]]):
         if r.status_code != 200:
             raise Exception(f"Error inserting records: {r.text}")
 
-    MAX_ALLOWED_BULK = 1000
+    MAX_ALLOWED_BULK = 500
 
     if len(records) < MAX_ALLOWED_BULK:
         _load_recs(project_id, group_name, records)
