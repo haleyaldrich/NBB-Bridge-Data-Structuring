@@ -2,45 +2,46 @@ import numpy as np
 import pandas as pd
 from typing import Callable
 
-class CPTGeneral():
+
+class CPTGeneral:
     """
     Data-oriented class that models a valid record for insertion in
     OpenGround`s `StaticConePenetrationGeneral` table.
     """
 
     OG_MAPPER = {
-        'filepath': 'AssociatedFileReference',
-        'cpt_id': 'uui_LocationDetails',
-        'area_ratio': 'ConeAreaRatio',
-        'cone_id': 'ConeReference',
-        'depth_gwt': 'DepthGroundwater',
-        'pen_rate': 'NominalRateOfPenetration',
-        'remarks': 'Remarks',
-        'subcontractor': 'Subcontractor',
-        'test_id': 'TestNumber',
-        'cone_type': 'uui_TestType',
-        'pre_drill_depth': 'PreDrillDepth',
-        'timestamp': 'DateEnd'
+        "filepath": "AssociatedFileReference",
+        "cpt_id": "uui_LocationDetails",
+        "area_ratio": "ConeAreaRatio",
+        "cone_id": "ConeReference",
+        "depth_gwt": "DepthGroundwater",
+        "pen_rate": "NominalRateOfPenetration",
+        "remarks": "Remarks",
+        "subcontractor": "Subcontractor",
+        "test_id": "TestNumber",
+        "cone_type": "uui_TestType",
+        "pre_drill_depth": "PreDrillDepth",
+        "timestamp": "DateEnd",
     }
 
     def __init__(
-            self,
-            filepath: str,
-            cpt_id: str,
-            timestamp: str,
-            area_ratio: float,  # unitless
-            cone_id: str,
-            depth_gwt: float,  # ft
-            pen_rate: float,  # cm/s
-            remarks: str,
-            subcontractor: str,
-            test_id: str,
-            cone_type: str,
-            pre_drill_depth: float = None  # ft
-        ) -> None:
+        self,
+        filepath: str,
+        cpt_id: str,
+        timestamp: str,
+        area_ratio: float,  # unitless
+        cone_id: str,
+        depth_gwt: float,  # ft
+        pen_rate: float,  # cm/s
+        remarks: str,
+        subcontractor: str,
+        test_id: str,
+        cone_type: str,
+        pre_drill_depth: float = None,  # ft
+    ) -> None:
         """
-        Initializes a `CPTGeneral` object. Timestamp is "%Y-%m-%dT%H:%M:%SZ".        
-        """        
+        Initializes a `CPTGeneral` object. Timestamp is "%Y-%m-%dT%H:%M:%SZ".
+        """
         self.filepath = filepath
         self.cpt_id = cpt_id
         self.timestamp = timestamp
@@ -59,14 +60,14 @@ class CPTGeneral():
         """
         Returns a dictionary in the form {'attribute':'value'} where the
         attributes names are conformant to OpenGround's schema.
-        
+
         Attributes with value `None` are not included in the record.
         """
 
         record = {}
         for attr_name in dir(self):
-            
-            if not attr_name.startswith("__") and attr_name != 'OG_MAPPER':
+
+            if not attr_name.startswith("__") and attr_name != "OG_MAPPER":
 
                 attr_value = getattr(self, attr_name)
                 if attr_value is not None and not callable(attr_value):
@@ -78,11 +79,11 @@ class CPTGeneral():
         sorted_dict = {}
         for key, value in sorted_list:
             sorted_dict[key] = value
-    
+
         return sorted_dict
 
 
-class CPTData():
+class CPTData:
     """
     Data-oriented class that holds valid records for insertion in OpenGround`s
     `StaticConePenetrationData` table.
@@ -102,23 +103,23 @@ class CPTData():
     """
 
     OG_MAPPER = {
-        'depth': 'Depth',
-        'qc': 'ConeResistance',
-        'fs': 'LocalUnitSideFrictionResistance',
-        'u2': 'ShoulderPorewaterPressure',
-        'qt': 'CorrectedConeResistance',
-        'gamma_rad': 'NaturalGammaRadiation'
+        "depth": "Depth",
+        "qc": "ConeResistance",
+        "fs": "LocalUnitSideFrictionResistance",
+        "u2": "ShoulderPorewaterPressure",
+        "qt": "CorrectedConeResistance",
+        "gamma_rad": "NaturalGammaRadiation",
     }
 
     def __init__(
-            self,
-            cpt_id: str,
-            depth: np.ndarray,  # depth [ft]
-            qc: np.ndarray,  # cone resistance [tsf]
-            fs: np.ndarray,  # local unit side friction resistance [tsf]
-            u2: np.ndarray,  # shoulder porewater pressure [tsf]
-            qt: np.ndarray = None,  # corrected cone resistance [tsf]
-        ) -> None:
+        self,
+        cpt_id: str,
+        depth: np.ndarray,  # depth [ft]
+        qc: np.ndarray,  # cone resistance [tsf]
+        fs: np.ndarray,  # local unit side friction resistance [tsf]
+        u2: np.ndarray,  # shoulder porewater pressure [tsf]
+        qt: np.ndarray = None,  # corrected cone resistance [tsf]
+    ) -> None:
 
         self.depth = depth
         self.qc = qc
@@ -126,7 +127,7 @@ class CPTData():
         self.u2 = u2
         self.qt = qt
         self.data = self._attrs_to_dataframe()
-        self.data['uui_StaticConePenetrationGeneral'] = cpt_id
+        self.data["uui_StaticConePenetrationGeneral"] = cpt_id
 
     def _attrs_to_dataframe(self) -> pd.DataFrame:
         """
@@ -155,18 +156,12 @@ class CPTData():
         # Remove rows where depth and cone resistance are NaN.
         # Some CPTs have only either raw or corrected cone resistance. Hence,
         # the conditional.
-        if 'ConeResistance' in df.columns:
-            cols = ['Depth', 'ConeResistance']
-        elif 'CorrectedConeResistance' in df.columns:
-            cols = ['Depth', 'CorrectedConeResistance']
+        if "ConeResistance" in df.columns:
+            cols = ["Depth", "ConeResistance"]
+        elif "CorrectedConeResistance" in df.columns:
+            cols = ["Depth", "CorrectedConeResistance"]
         else:
-            raise ValueError(
-                f'Condition not designed for. Columns are {df.columns}.')
+            raise ValueError(f"Condition not designed for. Columns are {df.columns}.")
 
-        df.dropna(
-            axis=0,
-            how='all',
-            subset=cols,
-            inplace=True
-        )
+        df.dropna(axis=0, how="all", subset=cols, inplace=True)
         return df
