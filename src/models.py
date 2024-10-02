@@ -118,7 +118,6 @@ class CPTData():
             fs: np.ndarray,  # local unit side friction resistance [tsf]
             u2: np.ndarray,  # shoulder porewater pressure [tsf]
             qt: np.ndarray = None,  # corrected cone resistance [tsf]
-            gamma_rad: np.ndarray = None  # gamma radiation [counts per second]
         ) -> None:
 
         self.depth = depth
@@ -126,7 +125,6 @@ class CPTData():
         self.fs = fs
         self.u2 = u2
         self.qt = qt
-        self.gamma_rad = gamma_rad
         self.data = self._attrs_to_dataframe()
         self.data['uui_StaticConePenetrationGeneral'] = cpt_id
 
