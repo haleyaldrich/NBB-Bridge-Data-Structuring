@@ -153,11 +153,10 @@ def parse_conetec(filepath: str, cpt_id: str) -> tuple[CPTGeneral, CPTData]:
 
 
 def insert_location_from_cpt_test(
-        cpt: CPTGeneral,
-        project_id: str,
-        location_type: str,
-    ) -> str:
-    
+    cpt: CPTGeneral,
+    project_id: str,
+    location_type: str,
+) -> str:
     """
     Inserts a location in OpenGround's `LocationDetails` table from a CPt test.
 
@@ -165,27 +164,27 @@ def insert_location_from_cpt_test(
 
     This function is provided as both a convenience and necessity because of
     the following two reasons:
-    
+
         * A location is required to insert a CPT test in OpenGround.
         * The schema does not have a timestamp field for the CPT test. This
             is instead stored in the `LocationDetails` table.
     """
-    
-    data = {
-        'Group': 'LocationDetails', 
-        'DataFields': [
-            {'Header': 'LocationID', 'Value': cpt.cpt_id},
-            {'Header': 'uui_LocationType', 'Value': location_type},
-            {'Header': 'DateStart', 'Value': cpt.timestamp},
 
-    ]}
+    data = {
+        "Group": "LocationDetails",
+        "DataFields": [
+            {"Header": "LocationID", "Value": cpt.cpt_id},
+            {"Header": "uui_LocationType", "Value": location_type},
+            {"Header": "DateStart", "Value": cpt.timestamp},
+        ],
+    }
     payload = json.dumps(data)
     url = (
-        f'{openground.get_root_url()}/data/projects/{project_id}/groups/LocationDetails'
+        f"{openground.get_root_url()}/data/projects/{project_id}/groups/LocationDetails"
     )
     r = requests.post(url, data=payload, headers=openground.get_og_headers())
-    
+
     if r.status_code != 200:
-        raise Exception(f'Error inserting Location: {r.text}')
-    
-    return r.json()['Id']
+        raise Exception(f"Error inserting Location: {r.text}")
+
+    return r.json()["Id"]
