@@ -10,7 +10,6 @@ from src import openground
 
 load_dotenv(override=True)
 
-
 def parse_conetec(filepath: str, cpt_id: str) -> tuple[CPTGeneral, CPTData]:
     """
     Parses a CPT Conetec file in xls format. The file is expected to conform
@@ -151,7 +150,6 @@ def parse_conetec(filepath: str, cpt_id: str) -> tuple[CPTGeneral, CPTData]:
 
     return cpt, cpt_data
 
-
 def insert_location_from_cpt_test(
     cpt: CPTGeneral,
     project_id: str,
@@ -188,3 +186,161 @@ def insert_location_from_cpt_test(
         raise Exception(f"Error inserting Location: {r.text}")
 
     return r.json()["Id"]
+
+def insert_cpt_test(cpt: CPTGeneral, project_id: str) -> str:
+    """
+    Inserts a CPT test in OpenGround's `StaticConePenetrationGeneral` table
+    from a CPTGeneral object.
+
+    The attribute `DateEnd` is removed from the record as it goes into the
+    `LocationDetails` table.
+
+    The `uui_LocationDetails` foreign key is mapped to the corresponding cloud_id.
+    """    
+    # Makes record conformant to OpenGround's schema:
+        # Formats attributes to {"Header": key, "Value": value}.
+        # Removes `DateEnd` attribute as it goes into `LocationDetails`.
+        # Maps `uui_LocationDetails` to the corresponding cloud_id.
+
+    locations = openground.get_project_locations(project_id)
+    if cpt.cpt_id not in locations:
+        raise ValueError(f"Location {cpt.cpt_id} not found in project. Locations found: {locations}")
+
+    record = []
+    for key, value in cpt.og_record.items():
+
+        if key == 'DateStart':
+            continue
+
+        if key =='uui_LocationDetails':
+            value = locations[value]
+
+        record.append({"Header": key, "Value": value})
+
+    # POST request
+    data = {'Group': 'StaticConePenetrationGeneral', 'DataFields': record}
+    payload = json.dumps(data)
+    url = (
+        f'{openground.get_root_url()}/data/projects/{project_id}/groups/'
+        f'StaticConePenetrationGeneral'
+    )
+    r = requests.post(url, data=payload, headers=openground.get_og_headers())
+
+    if r.status_code != 200:
+        raise Exception(f'Error inserting CPT test: {r.text}')
+    return r.json()['Id']
+
+def _format(d: dict) -> list[dict]:
+    """
+    Transforms a dictionary into a list of dictionaries in the form of
+    {"Header": "field_name", "Value": "field_value"} as required in the
+    Openground API.
+    """
+    output = []
+    for key, value in d.items():
+        if 'Date' in key and type(value) != str:
+            value = value.strftime("%Y-%m-%dT%H:%M:%SZ")
+        output.append({"Header": key, "Value": value})
+    return output
+
+def _format_records(recs: list[dict]) -> list[list[dict]]:
+    formatted_rec = []
+    for r in recs:
+        formatted_rec.append(_format(r))
+    return formatted_rec
+
+def _extract_records_from_df(df: pd.DataFrame) -> list:
+    """
+    Extracts records from a pd.DataFrame, removing any columns with null
+    values.
+
+    Args:
+        df (pd.DataFrame): The input pd.DataFrame from which records will be
+            extracted.
+
+    Returns:
+        list: A list of dictionaries, where each dictionary represents a record
+            (row) from the DataFrame,  containing only non-null values for each
+            record.
+
+    .. code-bloc:: python
+
+        data = {
+            'Name': ['John', 'Alice', 'Bob'],
+            'Age': [25, 30, None],
+            'City': ['New York', None, 'San Francisco'],
+            'Gender': ['Male', 'Female', 'Male']
+        }
+
+        df = pd.DataFrame(data)
+        extracted_records = extract_records_from_df(df)
+        >>> extracted_records
+
+            [
+            {'Name': 'John', 'Age': 25.0, 'City': 'York', 'Gender': 'Male'},
+            {'Name': 'Alice', 'Age': 30.0, 'Gender': 'Female'},
+            {'Name': 'Bob', 'City': 'San Francisco', 'Gender': 'Male'}
+            ]    
+    """
+
+    records = df.to_dict(orient='index')
+    for _, d in records.items():
+        for key, value in d.copy().items():
+            if pd.isna(value):
+                d.pop(key)
+
+    return list(records.values())
+
+def transform_df_to_openground_rec(df: pd.DataFrame) -> list[list[dict]]:
+    """
+    Converts a dataframe into a list of lists where each inner list is a 
+    dictionary conformant to the Openground structure. 
+
+    .. code-bloc:: python
+
+        data = {
+            'Name': ['John', 'Alice', 'Bob'],
+            'Age': [25, 30, None],
+            'City': ['New York', None, 'San Francisco'],
+            'Gender': ['Male', 'Female', 'Male']
+        }
+
+        df = pd.DataFrame(data)
+        recs = transform_df_to_openground_rec(df)
+        >>> recs = [
+                [
+                    {'Header': 'Name', 'Value': 'John'},
+                    {'Header': 'Age', 'Value': 25},
+                    {'Header': 'City', 'Value': 'York'},
+                    {'Header': 'Gender', 'Value': 'Male'},
+                ],
+                [
+                    {'Header': 'Name', 'Value': 'Alice'},
+                    {'Header': 'Age', 'Value': 30.0},
+                    {'Header': 'Gender', 'Value': 'Female'},
+                ],
+                [
+                    {'Header': 'Name', 'Value': 'Bob'},
+                    {'Header': 'City', 'Value': 'San Francisco'},
+                    {'Header': 'Gender', 'Value': 'Male'},
+                ]
+            ]
+    """
+    return _format_records(_extract_records_from_df(df))
+
+
+
+def insert_cpt_data(cpt_data: pd.DataFrame, project_id: str) -> None:
+    """Inserts CPT data in OpenGround's `StaticConePenetrationData` table."""
+
+    assert len(cpt_data['uui_StaticConePenetrationGeneral'].unique()) == 1
+    cpt_data = cpt_data.reset_index(drop=True)
+    cpt_id = cpt_data['uui_StaticConePenetrationGeneral'][0]
+    assert cpt_data['Depth'].is_unique
+    assert cpt_data.qt is not None
+
+
+    records = transform_df_to_openground_rec(cpt_data)
+    g = GroupManager('StaticConePenetrationData', p)
+    _validate_records(g, records)
+    utils.openground.insert_in_bulk(p, 'StaticConePenetrationData', records)

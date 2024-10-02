@@ -53,3 +53,29 @@ def test_insert_location_from_cpt_test():
     location_id = openground.get_project_locations(project_id)[cpt_name]
     openground.delete_location_by_id(project_id, location_id)
 
+
+def test_insert_cpt_test():
+
+    cpt_name = 'cpt_test'
+    project_id = 'b1e7058f-f750-4add-8245-21244b458432'
+
+    # Parse file and insert location
+    f = get_test_file_path("24-53-28244_SPBR-B13E-1A-BSC.XLS")
+    cpt, _ = utils.parse_conetec(f, cpt_name)
+    r = utils.insert_location_from_cpt_test(cpt, project_id, "CPT")
+    assert cpt_name in openground.get_project_locations(project_id)
+
+    # Insert CPT test
+    utils.insert_cpt_test(cpt, project_id)
+
+    location_id = openground.get_project_locations(project_id)[cpt_name]
+    openground.delete_location_by_id(project_id, location_id)
+
+
+def test_transform_df_to_openground_rec():
+
+    f = get_test_file_path("24-53-28244_SPBR-B13E-1A-BSC.XLS")
+    _, cpt_data = utils.parse_conetec(f, "cpt_test")
+    records = utils.transform_df_to_openground_rec(cpt_data.data)
+    assert len(records) == 116
+    
