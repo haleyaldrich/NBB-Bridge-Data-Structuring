@@ -14,7 +14,7 @@ def test_utils_parse_conetec():
     f = get_test_file_path("24-53-28244_SPBR-B13E-1A-BSC.XLS")
     cpt, cpt_data = utils.parse_conetec(f, "cpt_test")
     assert cpt.source_file == "24-53-28244_SPBR-B13E-1A-BSC.XLS"
-    assert cpt.cpt_id == "cpt_test"
+    assert cpt.name == "cpt_test"
     assert cpt.area_ratio == 0.80
     assert cpt.cone_type == "EC"
     assert cpt.timestamp.startswith("2024")
@@ -45,14 +45,16 @@ def test_insert_location_from_cpt_test():
     cpt_name = "cpt_test"
     project_id = "b1e7058f-f750-4add-8245-21244b458432"
 
+    # Insert location
     f = get_test_file_path("24-53-28244_SPBR-B13E-1A-BSC.XLS")
     cpt, _ = utils.parse_conetec(f, cpt_name)
     r = utils.insert_location_from_cpt_test(cpt, project_id, "CPT")
 
+    # Check location was inserted
     assert cpt_name in openground.get_project_locations(project_id)
 
-    location_id = openground.get_project_locations(project_id)[cpt_name]
-    openground.delete_location_by_id(project_id, location_id)
+    # Delete location
+    openground.delete_location_by_id(project_id, r)
 
 
 def test_insert_cpt_test():
@@ -69,8 +71,8 @@ def test_insert_cpt_test():
     # Insert CPT test
     utils.insert_cpt_test(cpt, project_id)
 
-    location_id = openground.get_project_locations(project_id)[cpt_name]
-    openground.delete_location_by_id(project_id, location_id)
+    # Delete location and by extension the CPT test
+    openground.delete_location_by_id(project_id, r)
 
 
 def test_transform_df_to_openground_rec():
@@ -79,3 +81,26 @@ def test_transform_df_to_openground_rec():
     _, cpt_data = utils.parse_conetec(f, "cpt_test")
     records = utils.transform_df_to_openground_rec(cpt_data.data)
     assert len(records) == 116
+
+
+# def test_insert_cpt_data():
+
+#     cpt_name = "cpt_test"
+#     project_id = "b1e7058f-f750-4add-8245-21244b458432"
+
+#     # Parse file and insert location
+#     f = get_test_file_path("24-53-28244_SPBR-B13E-1A-BSC.XLS")
+#     cpt, cpt_data = utils.parse_conetec(f, cpt_name)
+#     utils.insert_location_from_cpt_test(cpt, project_id, "CPT")
+#     assert cpt_name in openground.get_project_locations(project_id)
+
+#     # Insert CPT test
+#     utils.insert_cpt_test(cpt, project_id)
+
+#     # Insert CPT data
+#     utils.insert_cpt_data(cpt_data, project_id)
+
+    # # Delete location and by extension the CPT test
+    # location = openground.get_project_locations(project_id)[cpt_name]
+    # openground.delete_location_by_id(project_id, location)
+

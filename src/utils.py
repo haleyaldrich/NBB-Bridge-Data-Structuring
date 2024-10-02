@@ -11,7 +11,7 @@ from src import openground
 load_dotenv(override=True)
 
 
-def parse_conetec(filepath: str, cpt_id: str) -> tuple[CPTGeneral, CPTData]:
+def parse_conetec(filepath: str, cpt_name: str) -> tuple[CPTGeneral, CPTData]:
     """
     Parses a CPT Conetec file in xls format. The file is expected to conform
     to a certain structure.
@@ -127,7 +127,7 @@ def parse_conetec(filepath: str, cpt_id: str) -> tuple[CPTGeneral, CPTData]:
 
     cpt = CPTGeneral(
         source_file=os.path.basename(filepath),
-        cpt_id=cpt_id,
+        name=cpt_name,
         timestamp=datetime,
         area_ratio=df_meta.loc["Tip Net Area Ratio:", "Value"],
         cone_id=str(df_meta.loc["Cone ID:", "Value"]),
@@ -141,7 +141,7 @@ def parse_conetec(filepath: str, cpt_id: str) -> tuple[CPTGeneral, CPTData]:
     )
 
     cpt_data = CPTData(
-        cpt_id=cpt_id,
+        cpt_name=cpt_name,
         depth=data["depth"].values,
         qc=data["qc"].values,
         qt=data["qt"].values,
@@ -173,7 +173,7 @@ def insert_location_from_cpt_test(
     data = {
         "Group": "LocationDetails",
         "DataFields": [
-            {"Header": "LocationID", "Value": cpt.cpt_id},
+            {"Header": "LocationID", "Value": cpt.name},
             {"Header": "uui_LocationType", "Value": location_type},
             {"Header": "DateStart", "Value": cpt.timestamp},
         ],
@@ -206,9 +206,9 @@ def insert_cpt_test(cpt: CPTGeneral, project_id: str) -> str:
     # Maps `uui_LocationDetails` to the corresponding cloud_id.
 
     locations = openground.get_project_locations(project_id)
-    if cpt.cpt_id not in locations:
+    if cpt.name not in locations:
         raise ValueError(
-            f"Location {cpt.cpt_id} not found in project. Locations found: {locations}"
+            f"Location {cpt.name} not found in project. Locations found: {locations}"
         )
 
     record = []
@@ -338,16 +338,36 @@ def transform_df_to_openground_rec(df: pd.DataFrame) -> list[list[dict]]:
     return _format_records(_extract_records_from_df(df))
 
 
-def insert_cpt_data(cpt_data: pd.DataFrame, project_id: str) -> None:
+def insert_cpt_data(cpt_data: CPTData, project_id: str) -> None:
     """Inserts CPT data in OpenGround's `StaticConePenetrationData` table."""
 
-    assert len(cpt_data["uui_StaticConePenetrationGeneral"].unique()) == 1
-    cpt_data = cpt_data.reset_index(drop=True)
-    cpt_id = cpt_data["uui_StaticConePenetrationGeneral"][0]
-    assert cpt_data["Depth"].is_unique
-    assert cpt_data.qt is not None
+    data = cpt_data.data
+    assert len(data["uui_StaticConePenetrationGeneral"].unique()) == 1
+    data = data.reset_index(drop=True)
+    assert data["Depth"].is_unique
+    assert data['CorrectedConeResistance'] is not None
 
-    records = transform_df_to_openground_rec(cpt_data)
-    g = GroupManager("StaticConePenetrationData", p)
-    _validate_records(g, records)
-    utils.openground.insert_in_bulk(p, "StaticConePenetrationData", records)
+    records = transform_df_to_openground_rec(data)
+    openground.insert_in_bulk(project_id, "StaticConePenetrationData", records)
+
+
+def get_number_cpt_records(project_id: str, cpt_name: str) -> int:
+    """
+    Returns the number of CPT readings loaded in OpenGround's
+    `StaticConePenetrationData` table for a given CPT ID.
+
+    Returns 0 if there are no CPT records or if specific cpt_name does not exist.
+    """    
+    payload = {
+        "Projections": [
+        {"Group": "LocationDetails", "Header": "LocationID"},
+        {"Group": "StaticConePenetrationGeneral", "Header": "TestNumber"},
+        {"Group": "StaticConePenetrationData", "Header": "ConeResistance"}
+    ],
+        "Group": "StaticConePenetrationData",
+        "Projects": [p.cloud_id]
+    }
+    df = utils.openground.execute_query(payload, p.request_handler)
+    if len(df) == 0:
+        return 0
+    return len(df[df['LocationID'] == cpt_name])

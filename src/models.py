@@ -10,7 +10,7 @@ class CPTGeneral:
 
     OG_MAPPER = {
         "source_file": "AssociatedFileReference",
-        "cpt_id": "uui_LocationDetails",
+        "name": "uui_LocationDetails",
         "area_ratio": "ConeAreaRatio",
         "cone_id": "ConeReference",
         "depth_gwt": "DepthGroundwater",
@@ -26,7 +26,7 @@ class CPTGeneral:
     def __init__(
         self,
         source_file: str,
-        cpt_id: str,
+        name: str,
         timestamp: str,  # "%Y-%m-%dT%H:%M:%SZ"
         area_ratio: float,  # unitless
         cone_id: str,
@@ -42,7 +42,7 @@ class CPTGeneral:
         Initializes a `CPTGeneral` object. Timestamp is "%Y-%m-%dT%H:%M:%SZ".
         """
         self.source_file = source_file
-        self.cpt_id = cpt_id
+        self.name = name
         self.timestamp = timestamp
         self.area_ratio = area_ratio
         self.cone_id = cone_id
@@ -107,12 +107,11 @@ class CPTData:
         "fs": "LocalUnitSideFrictionResistance",
         "u2": "ShoulderPorewaterPressure",
         "qt": "CorrectedConeResistance",
-        "gamma_rad": "NaturalGammaRadiation",
     }
 
     def __init__(
         self,
-        cpt_id: str,
+        cpt_name: str,
         depth: np.ndarray,  # depth [ft]
         qc: np.ndarray,  # cone resistance [tsf]
         fs: np.ndarray,  # local unit side friction resistance [tsf]
@@ -126,7 +125,7 @@ class CPTData:
         self.u2 = u2
         self.qt = qt
         self.data = self._attrs_to_dataframe()
-        self.data["uui_StaticConePenetrationGeneral"] = cpt_id
+        self.data["uui_StaticConePenetrationGeneral"] = cpt_name
 
     def _attrs_to_dataframe(self) -> pd.DataFrame:
         """

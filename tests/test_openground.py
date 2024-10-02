@@ -28,5 +28,3 @@ def test_get_projects():
 def test_get_project_locations():
     r = openground.get_project_locations(PROJECT_CLOUD_ID)
     assert 'BR-TN-3(SCPT)' in r
-
-
